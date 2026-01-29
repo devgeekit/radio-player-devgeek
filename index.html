@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radio Player DevGeek.IT</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            overflow-x: hidden;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        /* Canvas фон */
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* Основной контейнер */
+        .container {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            padding-bottom: 80px; /* Для футера */
+        }
+
+        /* Заголовок */
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: fadeIn 1s ease;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(0, 200, 255, 0.7);
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #00ffff, #0080ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Плеер */
+        .player-container {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(20, 25, 40, 0.75);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(0, 200, 255, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 150, 255, 0.2);
+            overflow: hidden;
+            margin-bottom: 30px;
+            animation: slideUp 0.8s ease;
+            transition: transform 0.3s ease;
+        }
+
+        .player-container:hover {
+            transform: translateY(-5px);
+        }
+
+        /* Верхняя часть плеера */
+        .player-header {
+            padding: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .station-info {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .station-name {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #00e5ff;
+            text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+        }
+
+        .station-status {
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+            opacity: 0.8;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ff3e3e;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.playing {
+            background-color: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        /* Элементы управления */
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .play-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00a8ff, #0097e6);
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 168, 255, 0.4);
+        }
+
+        .play-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0, 168, 255, 0.6);
+        }
+
+        .play-btn:active {
+            transform: scale(0.98);
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 10px;
+        }
+
+        .volume-icon {
+            font-size: 1.3rem;
+            color: #00a8ff;
+        }
+
+        .volume-slider {
+            width: 100px;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #00a8ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 168, 255, 0.8);
+        }
+
+        /* Список станций */
+        .stations-container {
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .stations-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #00e5ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stations-title i {
+            font-size: 1.2rem;
+        }
+
+        .stations-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 12px;
+        }
+
+        .station-item {
+            padding: 15px;
+            background: rgba(30, 35, 50, 0.6);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .station-item:hover {
+            background: rgba(40, 45, 70, 0.8);
+            border-color: rgba(0, 200, 255, 0.3);
+            transform: translateY(-3px);
+        }
+
+        .station-item.active {
+            background: rgba(0, 100, 255, 0.25);
+            border-color: rgba(0, 200, 255, 0.6);
+            box-shadow: 0 0 15px rgba(0, 150, 255, 0.3);
+        }
+
+        .station-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #00a8ff, #0097e6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .station-details {
+            flex: 1;
+        }
+
+        .station-item-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 1rem;
+        }
+
+        .station-item-category {
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        /* Футер */
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(15, 20, 35, 0.85);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 200, 255, 0.2);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .footer-left {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #00e5ff;
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+        }
+
+        .footer-right a {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: linear-gradient(90deg, #0088ff, #00a8ff);
+            border-radius: 50px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 136, 255, 0.4);
+        }
+
+        .footer-right a:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 136, 255, 0.6);
+            gap: 15px;
+        }
+
+        .footer-right a i {
+            font-size: 1.2rem;
+        }
+
+        /* Анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .player-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .stations-list {
+                grid-template-columns: 1fr;
+            }
+            
+            footer {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+            }
+            
+            .footer-left, .footer-right {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .player-container {
+                border-radius: 15px;
+            }
+            
+            .play-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+            
+            .volume-slider {
+                width: 80px;
+            }
+        }
+
+        /* Стилизация скроллбара */
+        .stations-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .stations-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .stations-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00a8ff, #0097e6);
+            border-radius: 4px;
+        }
+
+        /* Эффект загрузки */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #00a8ff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Сообщения об ошибках */
+        .error-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 50, 50, 0.9);
+            padding: 15px 20px;
+            border-radius: 10px;
+            border-left: 5px solid #ff0000;
+            z-index: 1000;
+            animation: slideInRight 0.5s ease, fadeOut 0.5s ease 3s forwards;
+            max-width: 300px;
+            box-shadow: 0 5px 15px rgba(255, 0, 0, 0.3);
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; visibility: hidden; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Canvas фон -->
+    <canvas id="canvas"></canvas>
+
+    <!-- Основной контейнер -->
+    <div class="container">
+        <header>
+            <h1>Radio Player DevGeek.IT</h1>
+            <p class="subtitle">Современный веб-радио плеер с анимированным фоном и стеклянным дизайном</p>
+        </header>
+
+        <!-- Плеер -->
+        <div class="player-container">
+            <div class="player-header">
+                <div class="station-info">
+                    <div class="station-name">Выберите станцию</div>
+                    <div class="station-status">
+                        <div class="status-indicator"></div>
+                        <span class="status-text">Нажмите Play для начала прослушивания</span>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button class="play-btn" id="playBtn">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    
+                    <div class="volume-container">
+                        <i class="fas fa-volume-up volume-icon"></i>
+                        <input type="range" min="0" max="100" value="70" class="volume-slider" id="volumeSlider">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stations-container">
+                <h3 class="stations-title">
+                    <i class="fas fa-broadcast-tower"></i>
+                    Доступные радиостанции
+                </h3>
+                <div class="stations-list" id="stationsList">
+                    <!-- Список станций будет сгенерирован JavaScript -->
+                </div>
+            </div>
+        </div>
+        
+        <p style="opacity: 0.7; text-align: center; max-width: 600px; margin-top: 10px;">
+            Для лучшего звука рекомендуем использовать наушники или качественные колонки. При проблемах со звуком попробуйте переключиться на другую станцию.
+        </p>
+    </div>
+
+    <!-- Футер -->
+    <footer>
+        <div class="footer-left">
+            👉 DevGeek.IT
+        </div>
+        <div class="footer-right">
+            <a href="https://t.me/+dut0qXEQ_PBmZTli" target="_blank">
+                <i class="fab fa-telegram"></i>
+                Связаться в Telegram
+            </a>
+        </div>
+    </footer>
+
+    <!-- Аудио элемент -->
+    <audio id="audioPlayer" preload="none"></audio>
+
+    <script>
+        // Список радиостанций из предоставленного M3U
+        const radioStations = [
+            { name: "Record", url: "https://radiorecord.hostingradio.ru/rr_main96.aacp" },
+            { name: "Russian Mix", url: "https://radiorecord.hostingradio.ru/rus96.aacp" },
+            { name: "Хиты всех времен", url: "https://radiorecord.hostingradio.ru/alltimers96.aacp" },
+            { name: "Christmas Chill", url: "https://radiorecord.hostingradio.ru/christmaschill96.aacp" },
+            { name: "Christmas", url: "https://radiorecord.hostingradio.ru/christmas96.aacp" },
+            { name: "Русская Зима", url: "https://radiorecord.hostingradio.ru/ruszima96.aacp" },
+            { name: "Супердискотека 90-х", url: "https://radiorecord.hostingradio.ru/sd9096.aacp" },
+            { name: "Russian Hits", url: "https://radiorecord.hostingradio.ru/russianhits96.aacp" },
+            { name: "Колбасный Цех", url: "https://radiorecord.hostingradio.ru/pump96.aacp" },
+            { name: "Festivals", url: "https://radiorecord.hostingradio.ru/livedjsets96.aacp" },
+            { name: "Deep", url: "https://radiorecord.hostingradio.ru/deep96.aacp" },
+            { name: "Chill-Out", url: "https://radiorecord.hostingradio.ru/chil96.aacp" },
+            { name: "Сказки MC V", url: "https://radiorecord.hostingradio.ru/skazki96.aacp" },
+            { name: "На шашлыки!", url: "https://radiorecord.hostingradio.ru/nashashlyki96.aacp" },
+            { name: "Megamix", url: "https://radiorecord.hostingradio.ru/mix96.aacp" },
+            { name: "Rock", url: "https://radiorecord.hostingradio.ru/rock96.aacp" },
+            { name: "Remix", url: "https://radiorecord.hostingradio.ru/rmx96.aacp" },
+            { name: "Гоп FM", url: "https://radiorecord.hostingradio.ru/gop96.aacp" },
+            { name: "Big Hits", url: "https://radiorecord.hostingradio.ru/bighits96.aacp" },
+            { name: "Chill House", url: "https://radiorecord.hostingradio.ru/chillhouse96.aacp" },
+            { name: "Рекорд 00-х", url: "https://radiorecord.hostingradio.ru/200096.aacp" },
+            { name: "Melodic Techno", url: "https://radiorecord.hostingradio.ru/melodic96.aacp" },
+            { name: "Record 80-х", url: "https://radiorecord.hostingradio.ru/198096.aacp" },
+            { name: "Нафталин FM", url: "https://radiorecord.hostingradio.ru/naft96.aacp" },
+            { name: "Маятник Фуко", url: "https://radiorecord.hostingradio.ru/mf96.aacp" },
+            { name: "Trancemission", url: "https://radiorecord.hostingradio.ru/tm96.aacp" },
+            { name: "Summer Dance", url: "https://radiorecord.hostingradio.ru/summerparty96.aacp" },
+            { name: "Russian Gold", url: "https://radiorecord.hostingradio.ru/russiangold96.aacp" },
+            { name: "Beach Party", url: "https://radiorecord.hostingradio.ru/beach96.aacp" },
+            { name: "Pirate Station", url: "https://radiorecord.hostingradio.ru/ps96.aacp" },
+            { name: "Mashup", url: "https://radiorecord.hostingradio.ru/mashup96.aacp" },
+            { name: "Innocence", url: "https://radiorecord.hostingradio.ru/ibiza96.aacp" },
+            { name: "Медляк FM", url: "https://radiorecord.hostingradio.ru/mdl96.aacp" },
+            { name: "Party 24/7", url: "https://radiorecord.hostingradio.ru/party96.aacp" },
+            { name: "Phonk", url: "https://radiorecord.hostingradio.ru/phonk96.aacp" },
+            { name: "Record Gold", url: "https://radiorecord.hostingradio.ru/gold96.aacp" },
+            { name: "Руки Вверх!", url: "https://radiorecord.hostingradio.ru/rv96.aacp" },
+            { name: "На Хайпе", url: "https://radiorecord.hostingradio.ru/hype96.aacp" },
+            { name: "Rap Hits", url: "https://radiorecord.hostingradio.ru/rap96.aacp" },
+            { name: "Rap Classics", url: "https://radiorecord.hostingradio.ru/rapclassics96.aacp" },
+            { name: "Trance Classics", url: "https://radiorecord.hostingradio.ru/trancehits96.aacp" },
+            { name: "D'n'B Classics", url: "https://radiorecord.hostingradio.ru/drumhits96.aacp" },
+            { name: "Armin van Buuren", url: "https://radiorecord.hostingradio.ru/armin96.aacp" },
+            { name: "Summer Lounge", url: "https://radiorecord.hostingradio.ru/summerlounge96.aacp" },
+            { name: "Organic", url: "https://radiorecord.hostingradio.ru/organic96.aacp" },
+            { name: "Ultra Music Festival", url: "https://radiorecord.hostingradio.ru/ultra96.aacp" },
+            { name: "VIP House", url: "https://radiorecord.hostingradio.ru/vip96.aacp" },
+            { name: "Breaks", url: "https://radiorecord.hostingradio.ru/brks96.aacp" },
+            { name: "Liquid Funk", url: "https://radiorecord.hostingradio.ru/liquidfunk96.aacp" },
+            { name: "Workout", url: "https://radiorecord.hostingradio.ru/workout96.aacp" },
+            { name: "EDM", url: "https://radiorecord.hostingradio.ru/club96.aacp" },
+            { name: "Bass House", url: "https://radiorecord.hostingradio.ru/jackin96.aacp" },
+            { name: "GOA/PSY", url: "https://radiorecord.hostingradio.ru/goa96.aacp" },
+            { name: "10's Dance", url: "https://radiorecord.hostingradio.ru/201096.aacp" },
+            { name: "Trancehouse", url: "https://radiorecord.hostingradio.ru/trancehouse96.aacp" },
+            { name: "Black Rap", url: "https://radiorecord.hostingradio.ru/yo96.aacp" },
+            { name: "Techno", url: "https://radiorecord.hostingradio.ru/techno96.aacp" },
+            { name: "Tropical", url: "https://radiorecord.hostingradio.ru/trop96.aacp" },
+            { name: "Lo-Fi", url: "https://radiorecord.hostingradio.ru/lofi96.aacp" },
+            { name: "Tech House", url: "https://radiorecord.hostingradio.ru/techouse96.aacp" },
+            { name: "Trap", url: "https://radiorecord.hostingradio.ru/trap96.aacp" },
+            { name: "Technopop", url: "https://radiorecord.hostingradio.ru/technopop96.aacp" },
+            { name: "70's Dance", url: "https://radiorecord.hostingradio.ru/197096.aacp" },
+            { name: "Dream Dance", url: "https://radiorecord.hostingradio.ru/dream96.aacp" },
+            { name: "Neurofunk", url: "https://radiorecord.hostingradio.ru/neurofunk96.aacp" },
+            { name: "Ambient", url: "https://radiorecord.hostingradio.ru/ambient96.aacp" },
+            { name: "Record Classix", url: "https://radiorecord.hostingradio.ru/classix96.aacp" },
+            { name: "Record Club Show", url: "https://radiorecord.hostingradio.ru/clubshow96.aacp" },
+            { name: "Eurodance", url: "https://radiorecord.hostingradio.ru/eurodance96.aacp" },
+            { name: "Lo-Fi House", url: "https://radiorecord.hostingradio.ru/lofihouse96.aacp" },
+            { name: "House Hits", url: "https://radiorecord.hostingradio.ru/househits96.aacp" },
+            { name: "Uplifting", url: "https://radiorecord.hostingradio.ru/uplift96.aacp" },
+            { name: "Feel", url: "https://radiorecord.hostingradio.ru/feel96.aacp" },
+            { name: "Tiesto", url: "https://radiorecord.hostingradio.ru/tiesto96.aacp" },
+            { name: "A State of Trance", url: "https://radiorecord.hostingradio.ru/asot96.aacp" },
+            { name: "Веснушка FM", url: "https://radiorecord.hostingradio.ru/deti96.aacp" },
+            { name: "Симфония FM", url: "https://radiorecord.hostingradio.ru/symph96.aacp" },
+            { name: "Minimal/Tech", url: "https://radiorecord.hostingradio.ru/mini96.aacp" },
+            { name: "TOP 100 EDM", url: "https://radiorecord.hostingradio.ru/top100edm96.aacp" },
+            { name: "Dream Pop", url: "https://radiorecord.hostingradio.ru/dreampop96.aacp" },
+            { name: "House Classics", url: "https://radiorecord.hostingradio.ru/houseclss96.aacp" },
+            { name: "David Guetta", url: "https://radiorecord.hostingradio.ru/guetta96.aacp" },
+            { name: "DJ Цветкоff", url: "https://radiorecord.hostingradio.ru/tsvetkov96.aacp" },
+            { name: "Disco/Funk", url: "https://radiorecord.hostingradio.ru/discofunk96.aacp" },
+            { name: "Hard Bass", url: "https://radiorecord.hostingradio.ru/hbass96.aacp" },
+            { name: "Afro House", url: "https://radiorecord.hostingradio.ru/afro96.aacp" },
+            { name: "Rave FM", url: "https://radiorecord.hostingradio.ru/rave96.aacp" },
+            { name: "Nu Dance", url: "https://radiorecord.hostingradio.ru/nudance96.aacp" },
+            { name: "60's Dance", url: "https://radiorecord.hostingradio.ru/cadillac96.aacp" },
+            { name: "Lady Waks", url: "https://radiorecord.hostingradio.ru/ladywaks96.aacp" },
+            { name: "Dancecore", url: "https://radiorecord.hostingradio.ru/dc96.aacp" },
+            { name: "Future House", url: "https://radiorecord.hostingradio.ru/fut96.aacp" },
+            { name: "Darkside", url: "https://radiorecord.hostingradio.ru/darkside96.aacp" },
+            { name: "Future Rave", url: "https://radiorecord.hostingradio.ru/futurerave96.aacp" },
+            { name: "Reggae", url: "https://radiorecord.hostingradio.ru/reggae96.aacp" },
+            { name: "Electro", url: "https://radiorecord.hostingradio.ru/elect96.aacp" },
+            { name: "Hardstyle", url: "https://radiorecord.hostingradio.ru/teo96.aacp" },
+            { name: "Dubstep", url: "https://radiorecord.hostingradio.ru/dub96.aacp" },
+            { name: "Progressive", url: "https://radiorecord.hostingradio.ru/progr96.aacp" },
+            { name: "Nejtrino & Baur", url: "https://radiorecord.hostingradio.ru/nejtrinobaur96.aacp" },
+            { name: "Synthwave", url: "https://radiorecord.hostingradio.ru/synth96.aacp" },
+            { name: "Latina Dance", url: "https://radiorecord.hostingradio.ru/latina96.aacp" },
+            { name: "DJ Gvozd", url: "https://radiorecord.hostingradio.ru/djgvozd96.aacp" },
+            { name: "EDM Classics", url: "https://radiorecord.hostingradio.ru/edmhits96.aacp" },
+            { name: "Tecktonik", url: "https://radiorecord.hostingradio.ru/tecktonik96.aacp" },
+            { name: "Jungle", url: "https://radiorecord.hostingradio.ru/jungle96.aacp" },
+            { name: "Hypnotic", url: "https://radiorecord.hostingradio.ru/hypno96.aacp" },
+            { name: "UK Garage", url: "https://radiorecord.hostingradio.ru/ukgarage96.aacp" },
+            { name: "Гастарбайтер FM", url: "https://radiorecord.hostingradio.ru/gast96.aacp" },
+            { name: "Midtempo", url: "https://radiorecord.hostingradio.ru/mt96.aacp" },
+            { name: "Future Bass", url: "https://radiorecord.hostingradio.ru/fbass96.aacp" },
+            { name: "Martin Garrix", url: "https://radiorecord.hostingradio.ru/martingarrix96.aacp" },
+            { name: "Oliver Heldens", url: "https://radiorecord.hostingradio.ru/oliverheldens96.aacp" },
+            { name: "Moombahton", url: "https://radiorecord.hostingradio.ru/mmbt96.aacp" },
+            { name: "2-step", url: "https://radiorecord.hostingradio.ru/2step96.aacp" },
+            { name: "Complextro", url: "https://radiorecord.hostingradio.ru/complextro96.aacp" },
+            { name: "Groove/Tribal", url: "https://radiorecord.hostingradio.ru/groovetribal96.aacp" }
+        ];
+
+        // Состояние приложения
+        let currentStationIndex = 0;
+        let isPlaying = false;
+        let audio = document.getElementById('audioPlayer');
+        let playBtn = document.getElementById('playBtn');
+        let volumeSlider = document.getElementById('volumeSlider');
+        let stationsList = document.getElementById('stationsList');
+        let stationNameElement = document.querySelector('.station-name');
+        let statusIndicator = document.querySelector('.status-indicator');
+        let statusText = document.querySelector('.status-text');
+
+        // Иконки для разных категорий станций
+        const stationIcons = {
+            "Record": "fas fa-satellite-dish",
+            "Russian": "fas fa-flag",
+            "Christmas": "fas fa-tree",
+            "90-х": "fas fa-compact-disc",
+            "Rock": "fas fa-guitar",
+            "Chill": "fas fa-wind",
+            "Mix": "fas fa-blender",
+            "Hits": "fas fa-fire",
+            "House": "fas fa-home",
+            "Techno": "fas fa-sliders-h",
+            "Trance": "fas fa-star",
+            "Rap": "fas fa-microphone-alt",
+            "Classics": "fas fa-history",
+            "Dance": "fas fa-running",
+            "Party": "fas fa-glass-cheers",
+            "Gold": "fas fa-crown",
+            "Workout": "fas fa-dumbbell",
+            "EDM": "fas fa-headphones-alt",
+            "Lounge": "fas fa-couch",
+            "Festival": "fas fa-music",
+            "Bass": "fas fa-volume-up",
+            "Ambient": "fas fa-cloud",
+            "Pop": "fas fa-record-vinyl",
+            "Funk": "fas fa-gem",
+            "Rave": "fas fa-bolt",
+            "Future": "fas fa-rocket",
+            "Reggae": "fas fa-sun",
+            "Dubstep": "fas fa-wave-square",
+            "Synthwave": "fas fa-atom",
+            "Jungle": "fas fa-leaf",
+            "Garage": "fas fa-warehouse",
+            "default": "fas fa-broadcast-tower"
+        };
+
+        // Функция для получения иконки для станции
+        function getStationIcon(stationName) {
+            for (const [key, icon] of Object.entries(stationIcons)) {
+                if (stationName.includes(key)) {
+                    return icon;
+                }
+            }
+            return stationIcons.default;
+        }
+
+        // Функция для отображения сообщения об ошибке
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+            document.body.appendChild(errorDiv);
+            
+            // Удаляем сообщение через 3.5 секунд
+            setTimeout(() => {
+                if (errorDiv.parentNode) {
+                    errorDiv.parentNode.removeChild(errorDiv);
+                }
+            }, 3500);
+        }
+
+        // Функция для загрузки и воспроизведения радиостанции
+        function playStation(index) {
+            // Обновляем текущий индекс станции
+            currentStationIndex = index;
+            
+            // Обновляем список станций (подсветка активной)
+            updateStationsList();
+            
+            // Получаем станцию
+            const station = radioStations[index];
+            
+            // Обновляем информацию о станции
+            stationNameElement.textContent = station.name;
+            statusText.textContent = 'Загрузка...';
+            statusIndicator.classList.remove('playing');
+            
+            // Обновляем кнопку воспроизведения
+            playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            playBtn.disabled = true;
+            
+            // Пытаемся загрузить и воспроизвести станцию
+            audio.src = station.url;
+            audio.load();
+            
+            // Пытаемся воспроизвести
+            const playPromise = audio.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    // Успешное воспроизведение
+                    isPlaying = true;
+                    statusIndicator.classList.add('playing');
+                    statusText.textContent = 'Воспроизведение...';
+                    playBtn.disabled = false;
+                    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                    
+                    // Сохраняем выбранную станцию в localStorage
+                    localStorage.setItem('lastStationIndex', index.toString());
+                }).catch(error => {
+                    // Ошибка воспроизведения
+                    console.error('Ошибка воспроизведения:', error);
+                    playBtn.disabled = false;
+                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                    statusText.textContent = 'Ошибка воспроизведения. Попробуйте другую станцию.';
+                    
+                    // Показываем сообщение об ошибке
+                    showError('Не удалось воспроизвести станцию. Попробуйте другую.');
+                });
+            }
+        }
+
+        // Функция для обновления списка станций
+        function updateStationsList() {
+            stationsList.innerHTML = '';
+            
+            radioStations.forEach((station, index) => {
+                const stationItem = document.createElement('div');
+                stationItem.className = `station-item ${index === currentStationIndex ? 'active' : ''}`;
+                stationItem.dataset.index = index;
+                
+                // Определяем категорию станции для отображения
+                let category = "Музыка";
+                if (station.name.includes("Chill")) category = "Релакс";
+                if (station.name.includes("Rock")) category = "Рок";
+                if (station.name.includes("Rap")) category = "Рэп";
+                if (station.name.includes("Techno")) category = "Техно";
+                if (station.name.includes("House")) category = "Хаус";
+                if (station.name.includes("Trance")) category = "Транс";
+                if (station.name.includes("Classics")) category = "Классика";
+                if (station.name.includes("Dance")) category = "Танцы";
+                if (station.name.includes("Party")) category = "Вечеринка";
+                if (station.name.includes("Gold")) category = "Золотые хиты";
+                
+                stationItem.innerHTML = `
+                    <div class="station-icon">
+                        <i class="${getStationIcon(station.name)}"></i>
+                    </div>
+                    <div class="station-details">
+                        <div class="station-item-name">${station.name}</div>
+                        <div class="station-item-category">${category}</div>
+                    </div>
+                `;
+                
+                stationItem.addEventListener('click', () => {
+                    playStation(index);
+                });
+                
+                stationsList.appendChild(stationItem);
+            });
+        }
+
+        // Функция для переключения воспроизведения/паузы
+        function togglePlayPause() {
+            if (audio.src) {
+                if (isPlaying) {
+                    audio.pause();
+                    isPlaying = false;
+                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                    statusIndicator.classList.remove('playing');
+                    statusText.textContent = 'На паузе';
+                } else {
+                    audio.play().then(() => {
+                        isPlaying = true;
+                        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                        statusIndicator.classList.add('playing');
+                        statusText.textContent = 'Воспроизведение...';
+                    }).catch(error => {
+                        console.error('Ошибка воспроизведения:', error);
+                        showError('Ошибка воспроизведения. Попробуйте переключить станцию.');
+                    });
+                }
+            } else {
+                // Если нет выбранной станции, выбираем первую
+                playStation(0);
+            }
+        }
+
+        // Функция для обновления громкости
+        function updateVolume() {
+            const volume = volumeSlider.value / 100;
+            audio.volume = volume;
+            
+            // Сохраняем громкость в localStorage
+            localStorage.setItem('volume', volume.toString());
+        }
+
+        // Инициализация приложения
+        function init() {
+            // Загружаем сохраненную станцию и громкость из localStorage
+            const savedStationIndex = localStorage.getItem('lastStationIndex');
+            const savedVolume = localStorage.getItem('volume');
+            
+            if (savedStationIndex !== null && savedStationIndex >= 0 && savedStationIndex < radioStations.length) {
+                currentStationIndex = parseInt(savedStationIndex);
+                stationNameElement.textContent = radioStations[currentStationIndex].name;
+            }
+            
+            if (savedVolume !== null) {
+                const volumeValue = parseFloat(savedVolume) * 100;
+                volumeSlider.value = volumeValue;
+                audio.volume = parseFloat(savedVolume);
+            } else {
+                audio.volume = 0.7; // Значение по умолчанию
+            }
+            
+            // Создаем список станций
+            updateStationsList();
+            
+            // Назначаем обработчики событий
+            playBtn.addEventListener('click', togglePlayPause);
+            volumeSlider.addEventListener('input', updateVolume);
+            
+            // Обработка событий аудио
+            audio.addEventListener('playing', () => {
+                isPlaying = true;
+                statusIndicator.classList.add('playing');
+                statusText.textContent = 'Воспроизведение...';
+            });
+            
+            audio.addEventListener('pause', () => {
+                isPlaying = false;
+                statusIndicator.classList.remove('playing');
+                statusText.textContent = 'На паузе';
+            });
+            
+            audio.addEventListener('error', (e) => {
+                console.error('Ошибка аудио:', e);
+                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                statusIndicator.classList.remove('playing');
+                statusText.textContent = 'Ошибка загрузки потока';
+                showError('Ошибка загрузки радиостанции. Попробуйте другую.');
+            });
+            
+            audio.addEventListener('waiting', () => {
+                statusText.textContent = 'Буферизация...';
+            });
+            
+            audio.addEventListener('canplay', () => {
+                statusText.textContent = 'Готово к воспроизведению';
+            });
+            
+            // Обработка клавиатуры
+            document.addEventListener('keydown', (e) => {
+                // Пробел для play/pause
+                if (e.code === 'Space' && !e.target.matches('input, button, a')) {
+                    e.preventDefault();
+                    togglePlayPause();
+                }
+                
+                // Стрелки вверх/вниз для громкости
+                if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+                    e.preventDefault();
+                    let currentVolume = parseInt(volumeSlider.value);
+                    if (e.code === 'ArrowUp' && currentVolume < 100) {
+                        volumeSlider.value = currentVolume + 5;
+                        updateVolume();
+                    } else if (e.code === 'ArrowDown' && currentVolume > 0) {
+                        volumeSlider.value = currentVolume - 5;
+                        updateVolume();
+                    }
+                }
+                
+                // Стрелки влево/вправо для переключения станций
+                if (e.code === 'ArrowRight' || e.code === 'ArrowLeft') {
+                    e.preventDefault();
+                    let newIndex = currentStationIndex;
+                    if (e.code === 'ArrowRight') {
+                        newIndex = (currentStationIndex + 1) % radioStations.length;
+                    } else if (e.code === 'ArrowLeft') {
+                        newIndex = (currentStationIndex - 1 + radioStations.length) % radioStations.length;
+                    }
+                    playStation(newIndex);
+                }
+            });
+            
+            // Автоматическое воспроизведение при загрузке (если была сохраненная станция)
+            if (savedStationIndex !== null) {
+                // Не автовоспроизводим, чтобы не нарушать политики браузеров
+                // Вместо этого просто показываем станцию как выбранную
+                statusText.textContent = 'Нажмите Play для начала прослушивания';
+            }
+            
+            // Обновляем объемлющий контейнер для правильного отображения на мобильных
+            updateContainerHeight();
+            window.addEventListener('resize', updateContainerHeight);
+        }
+
+        // Функция для обновления высоты контейнера на мобильных устройствах
+        function updateContainerHeight() {
+            const container = document.querySelector('.container');
+            const footer = document.querySelector('footer');
+            
+            if (window.innerHeight < 800) {
+                const footerHeight = footer.offsetHeight;
+                container.style.minHeight = `calc(100vh - ${footerHeight}px)`;
+            } else {
+                container.style.minHeight = '100vh';
+            }
+        }
+
+        // Запуск инициализации при загрузке страницы
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+
+    <!-- Canvas фон с частицами -->
+    <script>
+        // Вставляем предоставленный код фона с частицами без изменений
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        const particles = [];
+        const fireworkParticles = [];
+        const dustParticles = [];
+        const ripples = [];
+        const techRipples = [];
+
+        const mouse = (() => {
+            let state = { x: null, y: null };
+            return {
+                get x() { return state.x; },
+                get y() { return state.y; },
+                set({ x, y }) { state = { x, y }; },
+                reset() { state = { x: null, y: null }; }
+            };
+        })();
+
+        let backgroundHue = 0;
+        let frameCount = 0;
+        let autoDrift = true;
+
+        function adjustParticleCount() {
+            const particleConfig = {
+                heightConditions: [200, 300, 400, 500, 600],
+                widthConditions: [450, 600, 900, 1200, 1600],
+                particlesForHeight: [40, 60, 70, 90, 110],
+                particlesForWidth: [40, 50, 70, 90, 110]
+            };
+
+            let numParticles = 130;
+
+            for (let i = 0; i < particleConfig.heightConditions.length; i++) {
+                if (canvas.height < particleConfig.heightConditions[i]) {
+                    numParticles = particleConfig.particlesForHeight[i];
+                    break;
+                }
+            }
+
+            for (let i = 0; i < particleConfig.widthConditions.length; i++) {
+                if (canvas.width < particleConfig.widthConditions[i]) {
+                    numParticles = Math.min(numParticles, particleConfig.particlesForWidth[i]);
+                    break;
+                }
+            }
+
+            return numParticles;
+        }
+
+        class Particle {
+            constructor(x, y, isFirework = false) {
+                const baseSpeed = isFirework
+                    ? Math.random() * 2 + 1
+                    : Math.random() * 0.5 + 0.3;
+                Object.assign(this, {
+                    isFirework,
+                    x,
+                    y,
+                    vx: Math.cos(Math.random() * Math.PI * 2) * baseSpeed,
+                    vy: Math.sin(Math.random() * Math.PI * 2) * baseSpeed,
+                    size: isFirework ? Math.random() * 2 + 2 : Math.random() * 3 + 1,
+                    hue: Math.random() * 360,
+                    alpha: 1,
+                    sizeDirection: Math.random() < 0.5 ? -1 : 1,
+                    trail: []
+                });
+            }
+            update(mouse) {
+                const dist = mouse.x !== null ? (mouse.x - this.x) ** 2 + (mouse.y - this.y) ** 2 : 0;
+
+                if (!this.isFirework) {
+                    const force = dist && dist < 22500 ? (22500 - dist) / 22500 : 0;
+
+                    if (mouse.x === null && autoDrift) {
+                        this.vx += (Math.random() - 0.5) * 0.03;
+                        this.vy += (Math.random() - 0.5) * 0.03;
+                    }
+
+                    if (dist) {
+                        const sqrtDist = Math.sqrt(dist);
+                        this.vx += ((mouse.x - this.x) / sqrtDist) * force * 0.1;
+                        this.vy += ((mouse.y - this.y) / sqrtDist) * force * 0.1;
+                    }
+
+                    this.vx *= mouse.x !== null ? 0.99 : 0.998;
+                    this.vy *= mouse.y !== null ? 0.99 : 0.998;
+                } else {
+                    this.alpha -= 0.02;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x <= 0 || this.x >= canvas.width - 1) this.vx *= -0.9;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -0.9;
+
+                this.size += this.sizeDirection * 0.1;
+                if (this.size > 4 || this.size < 1) this.sizeDirection *= -1;
+
+                this.hue = (this.hue + 0.3) % 360;
+
+                if (frameCount % 2 === 0 && (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1)) {
+                    this.trail.push({ x: this.x, y: this.y, hue: this.hue, alpha: this.alpha });
+                    if (this.trail.length > 15) this.trail.shift();
+                }
+            }
+            draw(ctx) {
+                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+                gradient.addColorStop(0, `hsla(${this.hue}, 80%, 60%, ${Math.max(this.alpha, 0)})`);
+                gradient.addColorStop(1, `hsla(${this.hue + 30}, 80%, 30%, ${Math.max(this.alpha, 0)})`);
+                ctx.fillStyle = gradient;
+                ctx.shadowBlur = canvas.width > 900 ? 10 : 0;
+                ctx.shadowColor = `hsl(${this.hue}, 80%, 60%)`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                if (this.trail.length > 1) {
+                    ctx.beginPath();
+                    ctx.lineWidth = 1.5;
+                    for (let i = 0; i < this.trail.length - 1; i++) {
+                        const { x: x1, y: y1, hue: h1, alpha: a1 } = this.trail[i];
+                        const { x: x2, y: y2 } = this.trail[i + 1];
+                        ctx.strokeStyle = `hsla(${h1}, 80%, 60%, ${Math.max(a1, 0)})`;
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                    }
+                    ctx.stroke();
+                }
+            }
+            isDead() {
+                return this.isFirework && this.alpha <= 0;
+            }
+        }
+
+        class DustParticle {
+            constructor() {
+                Object.assign(this, {
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 1.5 + 0.5,
+                    hue: Math.random() * 360,
+                    vx: (Math.random() - 0.5) * 0.05,
+                    vy: (Math.random() - 0.5) * 0.05
+                });
+            }
+            update() {
+                this.x = (this.x + this.vx + canvas.width) % canvas.width;
+                this.y = (this.y + this.vy + canvas.height) % canvas.height;
+                this.hue = (this.hue + 0.1) % 360;
+            }
+            draw(ctx) {
+                ctx.fillStyle = `hsla(${this.hue}, 30%, 70%, 0.3)`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class Ripple {
+            constructor(x, y, hue = 0, maxRadius = 30) {
+                Object.assign(this, { x, y, radius: 0, maxRadius, alpha: 0.5, hue });
+            }
+            update() {
+                this.radius += 1.5;
+                this.alpha -= 0.01;
+                this.hue = (this.hue + 5) % 360;
+            }
+            draw(ctx) {
+                ctx.strokeStyle = `hsla(${this.hue}, 80%, 60%, ${this.alpha})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            isDone() {
+                return this.alpha <= 0;
+            }
+        }
+
+        function createParticles() {
+            particles.length = 0;
+            dustParticles.length = 0;
+
+            const numParticles = adjustParticleCount();
+            for (let i = 0; i < numParticles; i++) {
+                particles.push(new Particle(Math.random() * canvas.width, Math.random() * canvas.height));
+            }
+            for (let i = 0; i < 200; i++) {
+                dustParticles.push(new DustParticle());
+            }
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            createParticles();
+        }
+
+        function drawBackground() {
+            backgroundHue = (backgroundHue + 0.2) % 360;
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, `hsl(${backgroundHue}, 40%, 15%)`);
+            gradient.addColorStop(1, `hsl(${(backgroundHue + 120) % 360}, 40%, 25%)`);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function connectParticles() {
+            const gridSize = 120;
+            const grid = new Map();
+
+            particles.forEach((p) => {
+                const key = `${Math.floor(p.x / gridSize)},${Math.floor(p.y / gridSize)}`;
+                if (!grid.has(key)) grid.set(key, []);
+                grid.get(key).push(p);
+            });
+
+            ctx.lineWidth = 1.5;
+            particles.forEach((p) => {
+                const gridX = Math.floor(p.x / gridSize);
+                const gridY = Math.floor(p.y / gridSize);
+
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        const key = `${gridX + dx},${gridY + dy}`;
+                        if (grid.has(key)) {
+                            grid.get(key).forEach((neighbor) => {
+                                if (neighbor !== p) {
+                                    const diffX = neighbor.x - p.x;
+                                    const diffY = neighbor.y - p.y;
+                                    const dist = diffX * diffX + diffY * diffY;
+                                    if (dist < 10000) {
+                                        ctx.strokeStyle = `hsla(${(p.hue + neighbor.hue) / 2}, 80%, 60%, ${1 - Math.sqrt(dist) / 100})`;
+                                        ctx.beginPath();
+                                        ctx.moveTo(p.x, p.y);
+                                        ctx.lineTo(neighbor.x, neighbor.y);
+                                        ctx.stroke();
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        function animate() {
+            drawBackground();
+
+            [dustParticles, particles, ripples, techRipples, fireworkParticles].forEach((arr) => {
+                for (let i = arr.length - 1; i >= 0; i--) {
+                    const obj = arr[i];
+                    obj.update(mouse);
+                    obj.draw(ctx);
+                    if (obj.isDone?.() || obj.isDead?.()) arr.splice(i, 1);
+                }
+            });
+
+            connectParticles();
+            frameCount++;
+            requestAnimationFrame(animate);
+        }
+
+        canvas.addEventListener("mousemove", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.set({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+            techRipples.push(new Ripple(mouse.x, mouse.y));
+            autoDrift = false;
+        });
+
+        canvas.addEventListener("mouseleave", () => {
+            mouse.reset();
+            autoDrift = true;
+        });
+
+        canvas.addEventListener("click", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            ripples.push(new Ripple(clickX, clickY, 0, 60));
+
+            for (let i = 0; i < 15; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 2 + 1;
+                const particle = new Particle(clickX, clickY, true);
+                particle.vx = Math.cos(angle) * speed;
+                particle.vy = Math.sin(angle) * speed;
+                fireworkParticles.push(particle);
+            }
+        });
+
+        window.addEventListener("resize", resizeCanvas);
+
+        resizeCanvas();
+        animate();
+    </script>
+</body>
+</html>
