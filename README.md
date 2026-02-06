@@ -42,5 +42,7 @@ MIT License. См. файл [LICENSE](LICENSE).
 - Telegram: [@DevGeek_IT](https://t.me/+dut0qXEQ_PBmZTli)
 
 ---
+<img width="2525" height="1186" alt="image" src="https://github.com/user-attachments/assets/028fb459-0ffe-403c-bef4-8ec69912dc58" />
+
 
 Сделано с ❤️ для сообщества DevGeek.IT
